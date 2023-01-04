@@ -1,0 +1,93 @@
+﻿@page "/EditProduct"
+@using DesktopModel.Model
+@using DesktopModel.Services;
+@inject IProductservice Productservice;
+@inject NavigationManager NavManager;
+<h3>EditProduct</h3>
+<div class="form-group">
+    @if (products == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Check</th>
+                    <th>Id</th>
+                    <th>Items</th>
+                    <th>Quantity</th>
+                    <th>Available Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in products)
+                {
+                    <tr>
+                        <td><input type="checkbox" @bind="item.Check" value="@item.Check" ></td>
+                        <td>@item.Id</td>
+                        <td>@item.Items</td>
+                        <td>@item.Quantity</td>
+                        <td><input type="number" @bind-value="item.AvailableQuan" class="form-control" placeholder="Available Quantity"></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+<div class="text-center mt-2">
+    <button class="btn btn-primary" type="submit" @onclick="Submit">
+        Submit
+    </button>
+</div>
+
+@code {
+    List<Product> products = new List<Product>();
+    protected override async Task OnInitializedAsync()
+    {
+        Getdata();
+    }
+    private async void Submit()
+    {
+        try
+        {
+            foreach(var item in products.ToList())
+            {
+                if(!item.Check)
+                {
+                    products.Remove(item);
+                }
+                else
+                {
+                    if(item.AvailableQuan >= item.Quantity)
+                    {
+                        await App.Current.MainPage.DisplayAlert("Oops","Please Select Available Quantity!!", "OK");
+                        Getdata();
+                        return;
+                    }
+                    item.ApprovedBy = session.UserDetail.Name;
+                }
+            }
+            if(products.Count == 0)
+            {
+                Getdata();
+                await App.Current.MainPage.DisplayAlert("Oops", "Please Select items!!", "OK");
+                return;
+            }
+            var message = await Productservice.Updatedata(products);
+            Getdata();
+            await App.Current.MainPage.DisplayAlert("Success", message, "OK");
+        }
+        catch (Exception ex)
+        {
+            await App.Current.MainPage.DisplayAlert("Oops", ex.Message, "OK");
+        }
+    }
+    private async void Getdata()
+    {
+        products = null;
+        products = new();
+        products = await Productservice.GetData();
+    }
+}

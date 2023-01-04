@@ -1,0 +1,145 @@
+﻿@page "/AddProduct"
+@using DesktopModel.Model
+@using DesktopModel.Services;
+@inject IProductservice Productservice;
+@inject NavigationManager NavManager;
+<h3>AddProduct</h3>
+
+<EditForm Model="@product" OnValidSubmit="Submit">
+    <div class="form-group">
+        <ul>
+            <li>
+                <label>Items</label>
+                <input type="text" @bind-value="product.Items" class="form-control" placeholder="Enter items">
+            </li>
+            <li>
+                <label>Quantity</label>
+                <input type="number" @bind-value="product.Quantity" class="form-control" placeholder="Enter Quantity">
+            </li>
+        </ul>
+    </div>
+
+    <div class="text-center mt-2">
+        @if (session.UserDetail.RoleId == 1)
+        {
+            <button class="btn btn-primary" type="submit">
+                <span class="@_spinnerClass" role="status" aria-hidden="true"></span>
+            Add Product
+        </button>
+            <a class="btn btn-primary" href="ApproveProduct">
+                Approve Product
+            </a>
+        }
+        <a class="btn btn-primary" href="EditProduct">
+            Edit Product
+        </a>
+        
+    </div>
+</EditForm>
+
+
+<div class="form-group">
+    @if (products == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Items</th>
+                    <th>Quantity</th>
+                    <th>ApprovedBy</th>
+                    <th>TakenBy</th>
+                    <th>TakenDate</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in products)
+                {
+                    <tr>
+                        <td>@item.Id</td>
+                        <td>@item.Items</td>
+                        <td>@item.Quantity</td>
+                        <td>@item.ApprovedBy</td>
+                        <td>@item.TakenBy</td>
+                        <td>@item.TakenDate.ToString("yyyyy:mm:dd")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    Product product = new();
+    List<Product> products = new List<Product>();
+    private string _spinnerClass = "";
+    protected override async Task OnInitializedAsync()
+    {
+        Getdata();
+    }
+    private async void Submit()
+    {
+        try
+        {
+            product.Id = id();
+            product.TakenBy = session.UserDetail.Name;
+            product.TakenDate = DateTime.Now;
+            if(products == null)
+            {
+                products = new();
+                products.Add(product);
+            }
+            else
+            {
+                bool check = false;
+                foreach(var item in products)
+                {
+                    if(item.Items==product.Items)
+                    {
+                        item.Quantity = item.Quantity + product.Quantity;
+                        check = true;
+                        break;
+                    }
+                }
+                if(!check)
+                {
+                    products.Add(product);
+                }
+            }
+
+            var message = await Productservice.AddData(products);
+            Clear();
+            Getdata();
+            await App.Current.MainPage.DisplayAlert("Success", message, "OK");
+        }
+        catch(Exception ex)
+        {
+            await App.Current.MainPage.DisplayAlert("Oops", ex.Message, "OK");
+        }
+    }
+    private int id()
+    {
+        int id = 1;
+        if(products!=null)
+        {
+            foreach (var item in products.ToList())
+            {
+                id++;
+            }
+        }
+        return id;
+    }
+    private async void Getdata()
+    {
+        products = await Productservice.GetData();
+    }
+    private void Clear()
+    {
+        product = new();
+        products = new();
+    }
+}
